@@ -1,30 +1,53 @@
 // ========================================================================
-// Poporing Maker — chunky 8-bit pixel art + RPG menu UI
+// Poporing Maker — frame-by-frame animation + 5-level RO shading
 // ========================================================================
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const W = 32, H = 32;
 
+// ── animation frames (squash-stretch) ───────────────────────────────────
+
+const ANIM_FRAMES = {
+  idle: [
+    { sx:1,    sy:1,    ox:0, oy:0  },
+    { sx:1.07, sy:0.9,  ox:0, oy:1  },
+    { sx:1,    sy:1,    ox:0, oy:0  },
+    { sx:0.93, sy:1.07, ox:0, oy:-1 },
+  ],
+  walk: [
+    { sx:1,    sy:1,    ox:0, oy:0  },
+    { sx:0.95, sy:1.05, ox:1, oy:-1 },
+    { sx:1,    sy:1,    ox:2, oy:0  },
+    { sx:1.05, sy:0.93, ox:1, oy:1  },
+  ],
+  attack: [
+    { sx:1.06, sy:0.9,  ox:0, oy:1  },
+    { sx:0.88, sy:1.14, ox:0, oy:-3 },
+    { sx:0.88, sy:1.1,  ox:0, oy:-2 },
+    { sx:1.14, sy:0.84, ox:0, oy:2  },
+    { sx:1,    sy:1,    ox:0, oy:0  },
+  ],
+  hurt: [
+    { sx:1.08, sy:0.92, ox:-1, oy:0 },
+    { sx:0.95, sy:1.02, ox:1,  oy:0 },
+    { sx:1.06, sy:0.94, ox:-1, oy:0 },
+    { sx:1,    sy:1,    ox:0,  oy:0 },
+  ],
+};
+
+const ANIM_SPEED = { idle:200, walk:160, attack:130, hurt:110 };
+
+let animTimer = null;
+let animFrame = 0;
+
 // ── state ───────────────────────────────────────────────────────────────
 
 const DEFAULTS = {
-  name: 'Poppy',
-  bodyColor: '#a6c081',
-  bodyShape: 'round',
-  bodyTexture: 'normal',
-  eyes: 'classic',
-  mouth: 'smile',
-  cheeks: 'none',
-  headTop: 'leaf',
-  headwear: 'none',
-  wings: 'none',
-  effect: 'none',
-  outlineStyle: 'classic',
-  bgPreset: 'transparent',
-  bgColor: '#181830',
-  animation: 'bob',
+  name:'Poppy', bodyColor:'#a6c081', bodyShape:'round', bodyTexture:'normal',
+  eyes:'classic', mouth:'smile', cheeks:'none',
+  headTop:'leaf', headwear:'none', wings:'none', effect:'none',
+  outlineStyle:'classic', bgPreset:'transparent', bgColor:'#181830', animation:'idle',
 };
-
 const state = { ...DEFAULTS };
 
 // ── options ─────────────────────────────────────────────────────────────
@@ -73,279 +96,231 @@ const CHIP_OPTS = {
   outlineStyle:[['classic','CLASSIC'],['dark','DARK'],['none','NONE']],
   bgPreset:[['transparent','TRANS'],['white','WHITE'],['navy','NAVY'],['sky','SKY'],
             ['grass','GRASS'],['sunset','SUNSET'],['dungeon','DUNG'],['pink','PINK']],
-  animation:[['none','NONE'],['bob','BOB'],['wiggle','WIGGLE'],['spin','SPIN']],
+  animation:[['none','NONE'],['idle','IDLE'],['walk','WALK'],['attack','ATK'],['hurt','HURT']],
 };
 
-// ── color helpers ───────────────────────────────────────────────────────
+// ── color ───────────────────────────────────────────────────────────────
 
-const hex2rgb = h => { const c=h.replace('#',''); return [parseInt(c.slice(0,2),16),parseInt(c.slice(2,4),16),parseInt(c.slice(4,6),16)]; };
-const rgb2hex = (r,g,b) => '#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
-const lighten = (h,a) => { const[r,g,b]=hex2rgb(h); return rgb2hex(r+(255-r)*a,g+(255-g)*a,b+(255-b)*a); };
-const darken  = (h,a) => { const[r,g,b]=hex2rgb(h); return rgb2hex(r*(1-a),g*(1-a),b*(1-a)); };
-const outline = h => { const[r,g,b]=hex2rgb(h); return rgb2hex(r*.95+10,g*.75+10,b*.8+15); };
+const hex2rgb=h=>{const c=h.replace('#','');return[parseInt(c.slice(0,2),16),parseInt(c.slice(2,4),16),parseInt(c.slice(4,6),16)];};
+const rgb2hex=(r,g,b)=>'#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+const lighten=(h,a)=>{const[r,g,b]=hex2rgb(h);return rgb2hex(r+(255-r)*a,g+(255-g)*a,b+(255-b)*a);};
+const darken=(h,a)=>{const[r,g,b]=hex2rgb(h);return rgb2hex(r*(1-a),g*(1-a),b*(1-a));};
+const mkOutline=h=>{const[r,g,b]=hex2rgb(h);return rgb2hex(r*.95+10,g*.75+10,b*.8+15);};
 
-function pal() {
-  const c = state.bodyColor;
-  const ol = state.outlineStyle==='dark'?darken(c,.6) : state.outlineStyle==='none'?null : outline(c);
+function pal(){
+  const c=state.bodyColor;
+  const ol=state.outlineStyle==='dark'?darken(c,.6):state.outlineStyle==='none'?null:mkOutline(c);
   return {
-    outline:ol, light:lighten(c,.38), base:c, dark:darken(c,.28), shine:lighten(c,.75),
-    eye:'#1a1a22', eyeW:'#fff', heart:'#d84050',
-    mouth:'#1a1a22', mouthIn:'#6a2838', tongue:'#d07088',
-    cheek:'#e89098', freckle:darken(c,.35), tear:'#80c0f0', tearW:'#c8e8ff',
-    leaf:'#7ac06a', leafD:'#3d7a3a',
-    cherry:'#d03030', cherryW:'#ff8080', stem:'#5a3a20',
-    spike:darken(c,.45), spikeW:lighten(c,.2),
-    antenna:'#808080', antennaT:'#f0e060',
-    droplet:lighten(c,.5), dropletW:'#fff',
-    bow:'#e05080', bowD:'#a03060',
-    crown:'#f0c830', crownD:'#b08810', gem:'#4080d0',
-    witch:'#4a2070', witchD:'#2a1050', witchB:'#f0c830',
-    santa:'#d03030', santaD:'#a02020', santaW:'#fff',
-    party:'#40a0e0', partyB:'#f06080', partyC:'#f0c830', partyR:'#fff',
-    petal:'#ffe860', petalC:'#e08030',
-    halo:'#f0e060', haloD:'#c0b030',
-    mush:'#d03030', mushD:'#fff', mushS:'#e8d8c0',
-    hpB:'#333', hpC:'#e05080',
-    wingW:'#e8e8f0', wingD:'#b0b0c0', wingDk:'#303048', wingDkL:'#484860',
-    effA:'#f0e060', effB:'#e05060', effC:'#80c0f0', effD:'#fff',
-    shadow:'rgba(0,0,0,.2)', metalA:lighten(c,.55), metalB:darken(c,.1),
+    outline:ol,
+    s1:darken(c,.32), s2:darken(c,.16), s3:c, s4:lighten(c,.26), s5:lighten(c,.5),
+    shine:lighten(c,.78),
+    eye:'#1a1a22',eyeW:'#fff',heart:'#d84050',
+    mouth:'#1a1a22',mouthIn:'#6a2838',tongue:'#d07088',
+    cheek:'#e89098',freckle:darken(c,.35),tear:'#80c0f0',tearW:'#c8e8ff',
+    leaf:'#7ac06a',leafD:'#3d7a3a',
+    cherry:'#d03030',cherryW:'#ff8080',stem:'#5a3a20',
+    spike:darken(c,.45),spikeW:lighten(c,.2),
+    antenna:'#808080',antennaT:'#f0e060',
+    droplet:lighten(c,.5),dropletW:'#fff',
+    bow:'#e05080',bowD:'#a03060',bowCenter:'#f0a0c0',
+    crown:'#f0c830',crownD:'#b08810',gem:'#4080d0',
+    witch:'#4a2070',witchD:'#2a1050',witchB:'#f0c830',witchStar:'#f0e060',
+    santa:'#d03030',santaD:'#a02020',santaW:'#fff',
+    party:'#40a0e0',partyB:'#f06080',partyC:'#f0c830',partyR:'#fff',
+    petal:'#ffe860',petalC:'#e08030',
+    halo:'#f0e060',haloD:'#c0b030',
+    mush:'#d03030',mushD:'#fff',mushS:'#e8d8c0',
+    hpB:'#333',hpC:'#e05080',
+    wingW:'#e8e8f0',wingD:'#b0b0c0',wingDk:'#303048',wingDkL:'#484860',
+    effA:'#f0e060',effB:'#e05060',effC:'#80c0f0',effD:'#fff',
+    shadow:'rgba(0,0,0,.2)',metalA:lighten(c,.55),
   };
 }
 
-// ── body ────────────────────────────────────────────────────────────────
+// ── body params ─────────────────────────────────────────────────────────
 
-function bParams() {
-  switch(state.bodyShape) {
-    case 'tall': return {cx:16,cy:16,rx:10,ry:13,nT:2,nB:2.5};
-    case 'wide': return {cx:16,cy:19,rx:14,ry:9,nT:2,nB:3.5};
-    case 'tiny': return {cx:16,cy:22,rx:8,ry:7,nT:2,nB:2.8};
-    default:     return {cx:16,cy:17,rx:12,ry:11,nT:2,nB:3};
+function baseBP(){
+  switch(state.bodyShape){
+    case'tall':return{cx:16,cy:16,rx:10,ry:13,nT:2,nB:2.5};
+    case'wide':return{cx:16,cy:19,rx:14,ry:9,nT:2,nB:3.5};
+    case'tiny':return{cx:16,cy:22,rx:8,ry:7,nT:2,nB:2.8};
+    default:   return{cx:16,cy:17,rx:12,ry:11,nT:2,nB:3};
   }
 }
 
-function makeGrid() {
-  const {cx,cy,rx,ry,nT,nB} = bParams();
-  const raw = Array.from({length:H},()=>Array(W).fill(0));
-  const clip = Math.min(cy+ry, H-4);
+function frameBP(frameIdx){
+  const base=baseBP();
+  const frames=ANIM_FRAMES[state.animation];
+  if(!frames) return base;
+  const f=frames[frameIdx%frames.length];
+  return {
+    cx: base.cx + (f.ox||0),
+    cy: base.cy + (f.oy||0),
+    rx: Math.round(base.rx * f.sx),
+    ry: Math.round(base.ry * f.sy),
+    nT: base.nT, nB: base.nB,
+  };
+}
 
-  for (let y=0;y<H;y++) { if(y>clip)continue; for (let x=0;x<W;x++) {
-    const dx=Math.abs((x+.5-cx)/rx), dy=(y+.5-cy)/ry, n=dy<0?nT:nB;
-    if (Math.pow(dx,n)+Math.pow(Math.abs(dy),n)<1) raw[y][x]=1;
+// ── grid builder ────────────────────────────────────────────────────────
+
+function buildGrid(bp){
+  const {cx,cy,rx,ry,nT,nB}=bp;
+  const raw=Array.from({length:H},()=>Array(W).fill(0));
+  const clip=Math.min(cy+ry,H-4);
+
+  for(let y=0;y<H;y++){if(y>clip)continue;for(let x=0;x<W;x++){
+    const dx=Math.abs((x+.5-cx)/rx),dy=(y+.5-cy)/ry,n=dy<0?nT:nB;
+    if(Math.pow(dx,n)+Math.pow(Math.abs(dy),n)<1) raw[y][x]=1;
   }}
 
   let bL=W,bR=0,bT=H,bB=0;
   for(let y=0;y<H;y++) for(let x=0;x<W;x++) if(raw[y][x]){if(x<bL)bL=x;if(x>bR)bR=x;if(y<bT)bT=y;if(y>bB)bB=y;}
-  const bW=Math.max(1,bR-bL), bH=Math.max(1,bB-bT);
+  const bW=Math.max(1,bR-bL),bH=Math.max(1,bB-bT);
 
-  const g = raw.map(r=>r.map(v=>v?'base':null));
-  for(let y=0;y<H;y++) for(let x=0;x<W;x++) {
-    if(!raw[y][x]) continue;
-    const br = 1-((x-bL)/bW*.55+(y-bT)/bH*.45);
-    g[y][x] = br>.6?'light' : br>.28?'base' : 'dark';
+  const g=raw.map(r=>r.map(v=>v?'s3':null));
+
+  // 5-level directional shading
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    if(!raw[y][x])continue;
+    const br=1-((x-bL)/bW*.55+(y-bT)/bH*.45);
+    g[y][x] = br>.78?'s5' : br>.58?'s4' : br>.38?'s3' : br>.2?'s2' : 's1';
   }
 
-  const hlx=cx-rx*.3, hly=cy-ry*.35, hlr=Math.max(2,rx*.2), hlry=Math.max(2,ry*.18);
-  for(let y=0;y<H;y++) for(let x=0;x<W;x++) {
-    if(!g[y][x]) continue;
-    const dx2=(x+.5-hlx)/hlr, dy2=(y+.5-hly)/hlry;
+  // shine spot
+  const hlx=cx-rx*.3,hly=cy-ry*.35,hlr=Math.max(2,rx*.2),hlry2=Math.max(2,ry*.18);
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    if(!g[y][x])continue;
+    const dx2=(x+.5-hlx)/hlr,dy2=(y+.5-hly)/hlry2;
     if(dx2*dx2+dy2*dy2<1) g[y][x]='shine';
   }
 
-  if(state.outlineStyle!=='none') {
-    for(let y=0;y<H;y++) for(let x=0;x<W;x++) {
-      if(!g[y][x]) continue;
-      for(const[dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+  // outline
+  if(state.outlineStyle!=='none'){
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+      if(!g[y][x])continue;
+      for(const[dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]]){
         const nx=x+dx,ny=y+dy;
         if(nx<0||ny<0||nx>=W||ny>=H||!raw[ny][nx]){g[y][x]='outline';break;}
       }
     }
   }
 
-  if(state.bodyTexture==='metallic') {
-    for(let y=bT+2;y<bB-1;y+=3) for(let x=bL+2;x<bR-1;x+=4) {
+  // metallic highlights
+  if(state.bodyTexture==='metallic'){
+    for(let y=bT+2;y<bB-1;y+=3) for(let x=bL+2;x<bR-1;x+=4){
       if(g[y][x]&&g[y][x]!=='outline') g[y][x]='metalA';
     }
   }
 
-  const eyeY=Math.round(cy-ry*.18), gap=Math.max(2,Math.round(rx*.28));
-  return {
-    g, raw, cx, cy, rx, ry, bT, bB, bL, bR,
-    eL:{x:cx-gap-1,y:eyeY}, eR:{x:cx+gap,y:eyeY},
-    mo:{x:cx,y:Math.round(cy+ry*.15)},
-  };
+  const eyeY=Math.round(cy-ry*.18),gap=Math.max(2,Math.round(rx*.28));
+  const info={cx,cy,rx,ry,bT,bB,bL,bR,eL:{x:cx-gap-1,y:eyeY},eR:{x:cx+gap,y:eyeY},mo:{x:cx,y:Math.round(cy+ry*.15)}};
+
+  // paint features
+  paintCheeks(g,info);
+  paintEyes(g,info);
+  paintMouth(g,info);
+  paintHeadTop(g,info);
+  paintHeadwear(g,info);
+  paintWings(g,info);
+
+  return {g,info,raw};
 }
 
 // ── pixel helper ────────────────────────────────────────────────────────
-
 function px(g,x,y,c){if(x>=0&&y>=0&&x<W&&y<H)g[y][x]=c;}
 
 // ── eyes ────────────────────────────────────────────────────────────────
-
 const EYE={
-  classic: [[0,0,'eye'],[1,0,'eyeW'],[0,1,'eye'],[1,1,'eye']],
-  round:   [[0,0,'eye'],[1,0,'eye'],[0,1,'eye'],[1,1,'eyeW']],
-  dot:     [[0,0,'eye']],
-  sleepy:  [[0,0,'eye'],[1,0,'eye'],[2,0,'eye']],
-  star:    [[1,0,'eye'],[0,1,'eye'],[1,1,'eye'],[2,1,'eye'],[1,2,'eye']],
-  heart:   [[0,0,'heart'],[2,0,'heart'],[0,1,'heart'],[1,1,'heart'],[2,1,'heart'],[1,2,'heart']],
-  dead:    [[0,0,'eye'],[2,0,'eye'],[1,1,'eye'],[0,2,'eye'],[2,2,'eye']],
-  sparkle: [[0,0,'eyeW'],[1,0,'eye'],[0,1,'eye'],[1,1,'eyeW']],
+  classic:[[0,0,'eye'],[1,0,'eyeW'],[0,1,'eye'],[1,1,'eye']],
+  round:[[0,0,'eye'],[1,0,'eye'],[0,1,'eye'],[1,1,'eyeW']],
+  dot:[[0,0,'eye']],
+  sleepy:[[0,0,'eye'],[1,0,'eye'],[2,0,'eye']],
+  star:[[1,0,'eye'],[0,1,'eye'],[1,1,'eye'],[2,1,'eye'],[1,2,'eye']],
+  heart:[[0,0,'heart'],[2,0,'heart'],[0,1,'heart'],[1,1,'heart'],[2,1,'heart'],[1,2,'heart']],
+  dead:[[0,0,'eye'],[2,0,'eye'],[1,1,'eye'],[0,2,'eye'],[2,2,'eye']],
+  sparkle:[[0,0,'eyeW'],[1,0,'eye'],[0,1,'eye'],[1,1,'eyeW']],
 };
 const EYE_A={
-  angry:{
-    l:[[1,0,'eye'],[0,1,'eye'],[1,1,'eye'],[0,2,'eye']],
-    r:[[0,0,'eye'],[0,1,'eye'],[1,1,'eye'],[1,2,'eye']],
-  },
-  wink:{
-    l:EYE.classic,
-    r:[[0,0,'eye'],[1,0,'eye']],
-  },
+  angry:{l:[[1,0,'eye'],[0,1,'eye'],[1,1,'eye'],[0,2,'eye']],r:[[0,0,'eye'],[0,1,'eye'],[1,1,'eye'],[1,2,'eye']]},
+  wink:{l:EYE.classic,r:[[0,0,'eye'],[1,0,'eye']]},
 };
 function paintEyes(g,i){
-  const s=EYE[state.eyes], a=EYE_A[state.eyes];
-  if(!s&&!a)return;
+  const s=EYE[state.eyes],a=EYE_A[state.eyes];if(!s&&!a)return;
   const p=(anc,px2)=>{for(const[dx,dy,c]of px2)px(g,anc.x+dx,anc.y+dy,c);};
-  if(a){p(i.eL,a.l);p(i.eR,a.r);} else {p(i.eL,s);p(i.eR,s);}
+  if(a){p(i.eL,a.l);p(i.eR,a.r);}else{p(i.eL,s);p(i.eR,s);}
 }
 
 // ── mouth ───────────────────────────────────────────────────────────────
-
 const MO={
-  smile:  [[-1,0,'mouth'],[0,1,'mouth'],[1,1,'mouth'],[2,0,'mouth']],
-  open:   [[0,0,'mouth'],[1,0,'mouth'],[0,1,'mouthIn'],[1,1,'tongue'],[0,2,'mouth'],[1,2,'mouth']],
-  smirk:  [[-1,1,'mouth'],[0,0,'mouth'],[1,0,'mouth'],[2,-1,'mouth']],
-  frown:  [[-1,1,'mouth'],[0,0,'mouth'],[1,0,'mouth'],[2,1,'mouth']],
-  tongue: [[-1,0,'mouth'],[0,1,'mouth'],[1,1,'mouth'],[2,0,'mouth'],[0,2,'tongue'],[1,2,'tongue']],
-  o:      [[0,0,'mouth'],[1,0,'mouth'],[0,1,'mouth'],[1,1,'mouth']],
-  cat:    [[-1,0,'mouth'],[0,1,'mouth'],[1,0,'mouth'],[2,1,'mouth'],[3,0,'mouth']],
-  teeth:  [[0,0,'mouth'],[1,0,'mouth'],[0,1,'eyeW'],[1,1,'eyeW'],[0,2,'mouth'],[1,2,'mouth']],
+  smile:[[-1,0,'mouth'],[0,1,'mouth'],[1,1,'mouth'],[2,0,'mouth']],
+  open:[[0,0,'mouth'],[1,0,'mouth'],[0,1,'mouthIn'],[1,1,'tongue'],[0,2,'mouth'],[1,2,'mouth']],
+  smirk:[[-1,1,'mouth'],[0,0,'mouth'],[1,0,'mouth'],[2,-1,'mouth']],
+  frown:[[-1,1,'mouth'],[0,0,'mouth'],[1,0,'mouth'],[2,1,'mouth']],
+  tongue:[[-1,0,'mouth'],[0,1,'mouth'],[1,1,'mouth'],[2,0,'mouth'],[0,2,'tongue'],[1,2,'tongue']],
+  o:[[0,0,'mouth'],[1,0,'mouth'],[0,1,'mouth'],[1,1,'mouth']],
+  cat:[[-1,0,'mouth'],[0,1,'mouth'],[1,0,'mouth'],[2,1,'mouth'],[3,0,'mouth']],
+  teeth:[[0,0,'mouth'],[1,0,'mouth'],[0,1,'eyeW'],[1,1,'eyeW'],[0,2,'mouth'],[1,2,'mouth']],
 };
-function paintMouth(g,i){
-  const d=MO[state.mouth]; if(!d)return;
-  for(const[dx,dy,c]of d) px(g,i.mo.x+dx,i.mo.y+dy,c);
-}
+function paintMouth(g,i){const d=MO[state.mouth];if(!d)return;for(const[dx,dy,c]of d)px(g,i.mo.x+dx,i.mo.y+dy,c);}
 
 // ── cheeks ──────────────────────────────────────────────────────────────
-
 function paintCheeks(g,i){
-  const sp=Math.round(i.rx*.5), cy=i.eL.y+3;
+  const sp=Math.round(i.rx*.5),cy=i.eL.y+3;
   if(state.cheeks==='blush'){
-    px(g,i.cx-sp,cy,'cheek'); px(g,i.cx-sp+1,cy,'cheek');
-    px(g,i.cx+sp-1,cy,'cheek'); px(g,i.cx+sp,cy,'cheek');
-  } else if(state.cheeks==='freckles'){
-    px(g,i.cx-sp,cy,'freckle'); px(g,i.cx-sp+1,cy+1,'freckle');
-    px(g,i.cx+sp,cy,'freckle'); px(g,i.cx+sp-1,cy+1,'freckle');
-  } else if(state.cheeks==='tears'){
+    px(g,i.cx-sp,cy,'cheek');px(g,i.cx-sp+1,cy,'cheek');
+    px(g,i.cx+sp-1,cy,'cheek');px(g,i.cx+sp,cy,'cheek');
+  }else if(state.cheeks==='freckles'){
+    px(g,i.cx-sp,cy,'freckle');px(g,i.cx-sp+1,cy+1,'freckle');
+    px(g,i.cx+sp,cy,'freckle');px(g,i.cx+sp-1,cy+1,'freckle');
+  }else if(state.cheeks==='tears'){
     for(let d=0;d<3;d++){px(g,i.eL.x,i.eL.y+2+d,'tear');px(g,i.eR.x+1,i.eR.y+2+d,'tear');}
   }
 }
 
 // ── head top ────────────────────────────────────────────────────────────
-
 function paintHeadTop(g,i){
-  const t=i.bT, cx=i.cx;
+  const t=i.bT,cx=i.cx;
   if(state.headTop==='leaf'){
-    px(g,cx+1,t-4,'leafD');
-    px(g,cx,t-3,'leaf'); px(g,cx+1,t-3,'leafD');
-    px(g,cx-1,t-2,'leaf'); px(g,cx,t-2,'leaf');
-    px(g,cx,t-1,'leafD');
-  }
-  else if(state.headTop==='droplet'){
-    px(g,cx-2,t-2,'droplet'); px(g,cx,t-3,'dropletW'); px(g,cx+2,t-2,'droplet');
-  }
-  else if(state.headTop==='spike'){
-    px(g,cx,t-4,'spike'); px(g,cx,t-3,'spikeW');
-    px(g,cx-1,t-2,'spike'); px(g,cx,t-2,'spikeW'); px(g,cx+1,t-2,'spike');
+    px(g,cx+1,t-4,'leafD');px(g,cx,t-3,'leaf');px(g,cx+1,t-3,'leafD');
+    px(g,cx-1,t-2,'leaf');px(g,cx,t-2,'leaf');px(g,cx,t-1,'leafD');
+  }else if(state.headTop==='droplet'){
+    px(g,cx-2,t-2,'droplet');px(g,cx,t-3,'dropletW');px(g,cx+2,t-2,'droplet');
+  }else if(state.headTop==='spike'){
+    px(g,cx,t-4,'spike');px(g,cx,t-3,'spikeW');
+    px(g,cx-1,t-2,'spike');px(g,cx,t-2,'spikeW');px(g,cx+1,t-2,'spike');
     px(g,cx,t-1,'spike');
-  }
-  else if(state.headTop==='antenna'){
-    px(g,cx,t-4,'antennaT'); px(g,cx+1,t-4,'antennaT');
-    px(g,cx,t-3,'antenna'); px(g,cx,t-2,'antenna'); px(g,cx,t-1,'antenna');
+  }else if(state.headTop==='antenna'){
+    px(g,cx,t-4,'antennaT');px(g,cx+1,t-4,'antennaT');
+    px(g,cx,t-3,'antenna');px(g,cx,t-2,'antenna');px(g,cx,t-1,'antenna');
   }
 }
 
 // ── headwear ────────────────────────────────────────────────────────────
-
 function paintHeadwear(g,i){
-  const t=i.bT, cx=i.cx, rx=i.rx;
-  const hw=state.headwear;
-  if(hw==='none') return;
-  if(hw==='bow'){
-    const bx=cx+rx-2;
-    px(g,bx-1,t,'bow');px(g,bx,t,'bowD');px(g,bx+1,t,'bow');
-    px(g,bx-1,t+1,'bow');px(g,bx+1,t+1,'bow');
-  }
-  else if(hw==='crown'){
-    for(let dx=-4;dx<=4;dx++) px(g,cx+dx,t,dx%2?'crown':'crownD');
-    for(let dx=-3;dx<=3;dx++) px(g,cx+dx,t-1,dx%2?'crown':'crownD');
-    px(g,cx-3,t-2,'crown');px(g,cx,t-2,'gem');px(g,cx+3,t-2,'crown');
-  }
-  else if(hw==='witch'){
-    for(let dx=-5;dx<=5;dx++) px(g,cx+dx,t,'witchD');
-    for(let dx=-4;dx<=4;dx++) px(g,cx+dx,t-1,'witch');
-    for(let dx=-4;dx<=4;dx++) px(g,cx+dx,t-2,'witchB');
-    for(let dx=-3;dx<=3;dx++) px(g,cx+dx,t-3,'witch');
-    for(let dx=-2;dx<=2;dx++) px(g,cx+dx,t-4,'witch');
-    for(let dx=-1;dx<=1;dx++) px(g,cx+dx,t-5,'witch');
-    px(g,cx,t-6,'witch');
-  }
-  else if(hw==='santa'){
-    for(let dx=-5;dx<=5;dx++) px(g,cx+dx,t,'santaW');
-    for(let dx=-4;dx<=4;dx++) px(g,cx+dx,t-1,'santa');
-    for(let dx=-3;dx<=3;dx++) px(g,cx+dx,t-2,'santa');
-    for(let dx=-2;dx<=2;dx++) px(g,cx+dx,t-3,'santaD');
-    for(let dx=-1;dx<=1;dx++) px(g,cx+dx,t-4,'santaD');
-    px(g,cx,t-5,'santaD');
-    px(g,cx+4,t-4,'santaW');px(g,cx+5,t-5,'santaW');
-  }
-  else if(hw==='party'){
-    for(let dx=-4;dx<=4;dx++) px(g,cx+dx,t,'partyR');
-    for(let dx=-3;dx<=3;dx++) px(g,cx+dx,t-1,dx%2?'party':'partyB');
-    for(let dx=-2;dx<=2;dx++) px(g,cx+dx,t-2,dx%2?'partyC':'party');
-    for(let dx=-1;dx<=1;dx++) px(g,cx+dx,t-3,'partyB');
-    px(g,cx,t-4,'partyR');
-  }
-  else if(hw==='mushroom'){
-    for(let dx=-4;dx<=4;dx++) px(g,cx+dx,t-1,'mush');
-    for(let dx=-3;dx<=3;dx++) px(g,cx+dx,t-2,'mush');
-    for(let dx=-2;dx<=2;dx++) px(g,cx+dx,t-3,'mush');
-    px(g,cx-2,t-2,'mushD');px(g,cx+1,t-2,'mushD');
-    px(g,cx-1,t,'mushS');px(g,cx,t,'mushS');px(g,cx+1,t,'mushS');
-  }
-  else if(hw==='flower'){
-    const fx=cx-rx+1;
-    px(g,fx,t,'petal');px(g,fx+1,t,'petal');
-    px(g,fx-1,t+1,'petal');px(g,fx,t+1,'petalC');px(g,fx+1,t+1,'petalC');px(g,fx+2,t+1,'petal');
-    px(g,fx,t+2,'petal');px(g,fx+1,t+2,'petal');
-  }
-  else if(hw==='halo'){
-    for(let dx=-4;dx<=4;dx++){px(g,cx+dx,t-3,'halo');px(g,cx+dx,t-1,'halo');}
-    px(g,cx-5,t-2,'haloD');px(g,cx+5,t-2,'haloD');
-  }
-  else if(hw==='headphones'){
-    for(let dx=-rx;dx<=rx;dx++) px(g,cx+dx,t-1,'hpB');
-    for(let dx=-rx+1;dx<=rx-1;dx++) px(g,cx+dx,t-2,'hpB');
-    for(let d=0;d<2;d++){
-      px(g,i.bL-1,i.eL.y+d,'hpC');px(g,i.bL-2,i.eL.y+d,'hpC');
-      px(g,i.bR+1,i.eR.y+d,'hpC');px(g,i.bR+2,i.eR.y+d,'hpC');
-    }
-  }
+  const t=i.bT,cx=i.cx,rx=i.rx,hw=state.headwear;
+  if(hw==='none')return;
+  if(hw==='bow'){const bx=cx+rx-2;px(g,bx-1,t,'bow');px(g,bx,t,'bowD');px(g,bx+1,t,'bow');px(g,bx-1,t+1,'bow');px(g,bx+1,t+1,'bow');}
+  else if(hw==='crown'){for(let d=-4;d<=4;d++)px(g,cx+d,t,d%2?'crown':'crownD');for(let d=-3;d<=3;d++)px(g,cx+d,t-1,d%2?'crown':'crownD');px(g,cx-3,t-2,'crown');px(g,cx,t-2,'gem');px(g,cx+3,t-2,'crown');}
+  else if(hw==='witch'){for(let d=-5;d<=5;d++)px(g,cx+d,t,'witchD');for(let d=-4;d<=4;d++)px(g,cx+d,t-1,'witch');for(let d=-4;d<=4;d++)px(g,cx+d,t-2,'witchB');for(let d=-3;d<=3;d++)px(g,cx+d,t-3,'witch');for(let d=-2;d<=2;d++)px(g,cx+d,t-4,'witch');for(let d=-1;d<=1;d++)px(g,cx+d,t-5,'witch');px(g,cx,t-6,'witch');px(g,cx+2,t-4,'witchStar');}
+  else if(hw==='santa'){for(let d=-5;d<=5;d++)px(g,cx+d,t,'santaW');for(let d=-4;d<=4;d++)px(g,cx+d,t-1,'santa');for(let d=-3;d<=3;d++)px(g,cx+d,t-2,'santa');for(let d=-2;d<=2;d++)px(g,cx+d,t-3,'santaD');for(let d=-1;d<=1;d++)px(g,cx+d,t-4,'santaD');px(g,cx,t-5,'santaD');px(g,cx+4,t-4,'santaW');px(g,cx+5,t-5,'santaW');}
+  else if(hw==='party'){for(let d=-4;d<=4;d++)px(g,cx+d,t,'partyR');for(let d=-3;d<=3;d++)px(g,cx+d,t-1,d%2?'party':'partyB');for(let d=-2;d<=2;d++)px(g,cx+d,t-2,d%2?'partyC':'party');for(let d=-1;d<=1;d++)px(g,cx+d,t-3,'partyB');px(g,cx,t-4,'partyR');}
+  else if(hw==='mushroom'){for(let d=-4;d<=4;d++)px(g,cx+d,t-1,'mush');for(let d=-3;d<=3;d++)px(g,cx+d,t-2,'mush');for(let d=-2;d<=2;d++)px(g,cx+d,t-3,'mush');px(g,cx-2,t-2,'mushD');px(g,cx+1,t-2,'mushD');px(g,cx-1,t,'mushS');px(g,cx,t,'mushS');px(g,cx+1,t,'mushS');}
+  else if(hw==='flower'){const fx=cx-rx+1;px(g,fx,t,'petal');px(g,fx+1,t,'petal');px(g,fx-1,t+1,'petal');px(g,fx,t+1,'petalC');px(g,fx+1,t+1,'petalC');px(g,fx+2,t+1,'petal');px(g,fx,t+2,'petal');px(g,fx+1,t+2,'petal');}
+  else if(hw==='halo'){for(let d=-4;d<=4;d++){px(g,cx+d,t-3,'halo');px(g,cx+d,t-1,'halo');}px(g,cx-5,t-2,'haloD');px(g,cx+5,t-2,'haloD');}
+  else if(hw==='headphones'){for(let d=-rx;d<=rx;d++)px(g,cx+d,t-1,'hpB');for(let d=-rx+1;d<=rx-1;d++)px(g,cx+d,t-2,'hpB');for(let d2=0;d2<2;d2++){px(g,i.bL-1,i.eL.y+d2,'hpC');px(g,i.bL-2,i.eL.y+d2,'hpC');px(g,i.bR+1,i.eR.y+d2,'hpC');px(g,i.bR+2,i.eR.y+d2,'hpC');}}
 }
 
 // ── wings ───────────────────────────────────────────────────────────────
-
 function paintWings(g,i){
   if(state.wings==='none')return;
-  const cy=i.cy-2, lx=i.bL, rx2=i.bR;
+  const cy=i.cy-2,lx=i.bL,rx2=i.bR;
   if(state.wings==='angel'){
     px(g,lx-1,cy,'wingW');px(g,lx-2,cy,'wingW');px(g,lx-3,cy-1,'wingW');
-    px(g,lx-1,cy-1,'wingD');px(g,lx-2,cy-1,'wingW');
-    px(g,lx-1,cy+1,'wingD');
+    px(g,lx-1,cy-1,'wingD');px(g,lx-2,cy-1,'wingW');px(g,lx-1,cy+1,'wingD');
     px(g,rx2+1,cy,'wingW');px(g,rx2+2,cy,'wingW');px(g,rx2+3,cy-1,'wingW');
-    px(g,rx2+1,cy-1,'wingD');px(g,rx2+2,cy-1,'wingW');
-    px(g,rx2+1,cy+1,'wingD');
-  }
-  else if(state.wings==='demon'){
+    px(g,rx2+1,cy-1,'wingD');px(g,rx2+2,cy-1,'wingW');px(g,rx2+1,cy+1,'wingD');
+  }else if(state.wings==='demon'){
     px(g,lx-1,cy,'wingDk');px(g,lx-2,cy,'wingDkL');px(g,lx-3,cy-1,'wingDk');px(g,lx-4,cy-2,'wingDk');
     px(g,lx-1,cy+1,'wingDk');px(g,lx-2,cy-1,'wingDk');
     px(g,rx2+1,cy,'wingDk');px(g,rx2+2,cy,'wingDkL');px(g,rx2+3,cy-1,'wingDk');px(g,rx2+4,cy-2,'wingDk');
@@ -353,69 +328,54 @@ function paintWings(g,i){
   }
 }
 
-// ── effects ─────────────────────────────────────────────────────────────
-
-function paintEffects(g,i){
-  const e=state.effect; if(e==='none')return;
+// ── effects (separate grid) ─────────────────────────────────────────────
+function buildEffects(info){
+  const eg=Array.from({length:H},()=>Array(W).fill(null));
+  const e=state.effect;if(e==='none')return eg;
+  const i=info;
   if(e==='sparkles'){
     const pts=[[3,5],[i.bR+2,i.bT-1],[i.bR+3,i.bT+6]];
-    for(const[sx,sy]of pts){px(g,sx,sy-1,'effA');px(g,sx-1,sy,'effA');px(g,sx,sy,'effA');px(g,sx+1,sy,'effA');px(g,sx,sy+1,'effA');}
-  }
-  else if(e==='hearts'){
-    const d=(sx,sy)=>{px(g,sx,sy,'effB');px(g,sx+2,sy,'effB');px(g,sx,sy+1,'effB');px(g,sx+1,sy+1,'effB');px(g,sx+2,sy+1,'effB');px(g,sx+1,sy+2,'effB');};
-    d(i.bR+1,i.bT-2); d(2,i.bT+1);
-  }
-  else if(e==='music'){
-    const d=(sx,sy)=>{px(g,sx+1,sy,'effA');px(g,sx+1,sy+1,'effA');px(g,sx,sy+2,'effA');px(g,sx,sy+3,'effA');};
-    d(i.bR+1,i.bT-3); d(i.bR+3,i.bT);
-  }
-  else if(e==='zzz'){
-    px(g,i.bR+1,i.bT-4,'effD');px(g,i.bR+2,i.bT-4,'effD');px(g,i.bR+3,i.bT-4,'effD');
-    px(g,i.bR+2,i.bT-3,'effD');
-    px(g,i.bR+1,i.bT-2,'effD');px(g,i.bR+2,i.bT-2,'effD');px(g,i.bR+3,i.bT-2,'effD');
-    px(g,i.bR+3,i.bT,'effD');px(g,i.bR+4,i.bT,'effD');px(g,i.bR+4,i.bT+1,'effD');px(g,i.bR+3,i.bT+1,'effD');
-  }
-  else if(e==='anger'){
+    for(const[sx,sy]of pts){px(eg,sx,sy-1,'effA');px(eg,sx-1,sy,'effA');px(eg,sx,sy,'effA');px(eg,sx+1,sy,'effA');px(eg,sx,sy+1,'effA');}
+  }else if(e==='hearts'){
+    const d=(sx,sy)=>{px(eg,sx,sy,'effB');px(eg,sx+2,sy,'effB');px(eg,sx,sy+1,'effB');px(eg,sx+1,sy+1,'effB');px(eg,sx+2,sy+1,'effB');px(eg,sx+1,sy+2,'effB');};
+    d(i.bR+1,i.bT-2);d(2,i.bT+1);
+  }else if(e==='music'){
+    const d=(sx,sy)=>{px(eg,sx+1,sy,'effA');px(eg,sx+1,sy+1,'effA');px(eg,sx,sy+2,'effA');px(eg,sx,sy+3,'effA');};
+    d(i.bR+1,i.bT-3);d(i.bR+3,i.bT);
+  }else if(e==='zzz'){
+    px(eg,i.bR+1,i.bT-4,'effD');px(eg,i.bR+2,i.bT-4,'effD');px(eg,i.bR+3,i.bT-4,'effD');
+    px(eg,i.bR+2,i.bT-3,'effD');
+    px(eg,i.bR+1,i.bT-2,'effD');px(eg,i.bR+2,i.bT-2,'effD');px(eg,i.bR+3,i.bT-2,'effD');
+    px(eg,i.bR+3,i.bT,'effD');px(eg,i.bR+4,i.bT,'effD');px(eg,i.bR+4,i.bT+1,'effD');px(eg,i.bR+3,i.bT+1,'effD');
+  }else if(e==='anger'){
     const sx=i.bR-1,sy=i.bT;
-    px(g,sx,sy,'effB');px(g,sx+2,sy,'effB');px(g,sx+1,sy+1,'effB');px(g,sx,sy+2,'effB');px(g,sx+2,sy+2,'effB');
-  }
-  else if(e==='sweat'){
+    px(eg,sx,sy,'effB');px(eg,sx+2,sy,'effB');px(eg,sx+1,sy+1,'effB');px(eg,sx,sy+2,'effB');px(eg,sx+2,sy+2,'effB');
+  }else if(e==='sweat'){
     const sx=i.bR+1,sy=i.bT;
-    px(g,sx,sy,'effC');px(g,sx,sy+1,'effC');px(g,sx,sy+2,'effC');
-  }
-  else if(e==='question'){
+    px(eg,sx,sy,'effC');px(eg,sx,sy+1,'effC');px(eg,sx,sy+2,'effC');
+  }else if(e==='question'){
     const sx=i.cx+1,sy=i.bT-5;
-    px(g,sx,sy,'effD');px(g,sx+1,sy,'effD');px(g,sx+1,sy+1,'effD');px(g,sx,sy+2,'effD');px(g,sx,sy+4,'effD');
+    px(eg,sx,sy,'effD');px(eg,sx+1,sy,'effD');px(eg,sx+1,sy+1,'effD');px(eg,sx,sy+2,'effD');px(eg,sx,sy+4,'effD');
   }
+  return eg;
 }
 
-// ── render ──────────────────────────────────────────────────────────────
+// ── SVG rendering ───────────────────────────────────────────────────────
 
-function render() {
-  const i = makeGrid();
-  const g = i.g;
-  paintCheeks(g,i);
-  paintEyes(g,i);
-  paintMouth(g,i);
-  paintHeadTop(g,i);
-  paintHeadwear(g,i);
-  paintWings(g,i);
+function renderSVG(gridData,effGrid){
+  const {g,info}=gridData;
+  const c=pal();
+  const ghostOp=state.bodyTexture==='ghost'?'0.55':'1';
 
-  const eg = Array.from({length:H},()=>Array(W).fill(null));
-  paintEffects(eg,i);
-
-  const c = pal();
-  const ghostOp = state.bodyTexture==='ghost'?'0.55':'1';
-
-  const lay = document.getElementById('bodyLayer');
+  const lay=document.getElementById('bodyLayer');
   while(lay.firstChild)lay.removeChild(lay.firstChild);
   for(let y=0;y<H;y++) for(let x=0;x<W;x++){
-    const k=g[y][x]; if(!k)continue;
-    const color=c[k]; if(!color)continue;
+    const k=g[y][x];if(!k)continue;
+    const color=c[k];if(!color)continue;
     const r=document.createElementNS(SVG_NS,'rect');
     r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',1);r.setAttribute('height',1);
     r.setAttribute('fill',color);
-    if(ghostOp!=='1'&&k!=='outline'&&k!=='eye'&&k!=='eyeW'&&k!=='mouth'&&k!=='mouthIn'&&k!=='tongue')
+    if(ghostOp!=='1'&&!['outline','eye','eyeW','mouth','mouthIn','tongue'].includes(k))
       r.setAttribute('opacity',ghostOp);
     lay.appendChild(r);
   }
@@ -423,33 +383,65 @@ function render() {
   const el2=document.getElementById('effectLayer');
   while(el2.firstChild)el2.removeChild(el2.firstChild);
   for(let y=0;y<H;y++) for(let x=0;x<W;x++){
-    const k=eg[y][x]; if(!k)continue;
-    const color=c[k]; if(!color)continue;
+    const k=effGrid[y][x];if(!k)continue;
+    const color=c[k];if(!color)continue;
     const r=document.createElementNS(SVG_NS,'rect');
     r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',1);r.setAttribute('height',1);
     r.setAttribute('fill',color);
     el2.appendChild(r);
   }
 
+  // ground shadow (uses base params, not frame-modified)
   const sl=document.getElementById('shadowLayer');
   while(sl.firstChild)sl.removeChild(sl.firstChild);
-  const shCy=i.bB+2, shRx=Math.round(i.rx*.65);
-  for(let x=i.cx-shRx;x<=i.cx+shRx;x++){
+  const base=baseBP();
+  const shCy=base.cy+base.ry+2,shRx=Math.round(base.rx*.65);
+  for(let x=base.cx-shRx;x<=base.cx+shRx;x++){
     const r=document.createElementNS(SVG_NS,'rect');
     r.setAttribute('x',x);r.setAttribute('y',shCy);r.setAttribute('width',1);r.setAttribute('height',1);
     r.setAttribute('fill',c.shadow);
     sl.appendChild(r);
   }
 
+  // bg
   const bg=document.getElementById('bgRect');
   if(state.bgPreset==='transparent') bg.setAttribute('fill','url(#checker)');
   else if(state.bgPreset==='solid') bg.setAttribute('fill',state.bgColor);
   else bg.setAttribute('fill',BG_PRESETS[state.bgPreset]||state.bgColor);
-
-  const bob=document.getElementById('bobGroup');
-  bob.classList.remove('bob','wiggle','spin');
-  if(state.animation!=='none') bob.classList.add(state.animation);
 }
+
+// ── animation system ────────────────────────────────────────────────────
+
+function renderFrame(idx){
+  const bp=frameBP(idx);
+  const gridData=buildGrid(bp);
+  const effGrid=buildEffects(gridData.info);
+  renderSVG(gridData,effGrid);
+
+  const frames=ANIM_FRAMES[state.animation];
+  const total=frames?frames.length:1;
+  document.getElementById('frameInfo').textContent=`FRAME ${(idx%total)+1}/${total}`;
+}
+
+function startAnim(){
+  stopAnim();
+  animFrame=0;
+  renderFrame(0);
+  const frames=ANIM_FRAMES[state.animation];
+  if(!frames)return;
+  const speed=ANIM_SPEED[state.animation]||200;
+  animTimer=setInterval(()=>{
+    animFrame=(animFrame+1)%frames.length;
+    renderFrame(animFrame);
+  },speed);
+}
+
+function stopAnim(){
+  if(animTimer){clearInterval(animTimer);animTimer=null;}
+  animFrame=0;
+}
+
+function render(){startAnim();}
 
 // ── UI ──────────────────────────────────────────────────────────────────
 
@@ -457,7 +449,7 @@ function mark(c,v){c.querySelectorAll('.chip').forEach(b=>b.classList.toggle('ac
 
 function buildChips(){
   document.querySelectorAll('.chips').forEach(c=>{
-    const f=c.dataset.field, opts=CHIP_OPTS[f]||[];
+    const f=c.dataset.field,opts=CHIP_OPTS[f]||[];
     c.innerHTML='';
     opts.forEach(([id,label])=>{
       const b=document.createElement('button');
@@ -493,14 +485,12 @@ function buildPresets(){
 }
 
 function wireTabs(){
-  document.querySelectorAll('.tab').forEach(t=>{
-    t.addEventListener('click',()=>{
-      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-      document.querySelectorAll('.panel').forEach(x=>x.classList.add('hidden'));
-      t.classList.add('active');
-      document.getElementById('panel-'+t.dataset.tab).classList.remove('hidden');
-    });
-  });
+  document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.add('hidden'));
+    t.classList.add('active');
+    document.getElementById('panel-'+t.dataset.tab).classList.remove('hidden');
+  }));
 }
 
 function wire(){
@@ -514,9 +504,12 @@ function wire(){
   document.getElementById('randomBtn').addEventListener('click',randomize);
   document.getElementById('resetBtn').addEventListener('click',reset);
   document.getElementById('pngBtn').addEventListener('click',exportPNG);
+  document.getElementById('sheetBtn').addEventListener('click',exportSheet);
   document.getElementById('jsonBtn').addEventListener('click',exportJSON);
   document.getElementById('loadJson').addEventListener('change',loadJSON);
 }
+
+// ── actions ─────────────────────────────────────────────────────────────
 
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
 
@@ -543,27 +536,72 @@ function dl(blob,name){
   setTimeout(()=>URL.revokeObjectURL(u),2000);
 }
 
+function gridToCanvas(gridData,effGrid,scale){
+  const cv=document.createElement('canvas');
+  cv.width=W*scale;cv.height=H*scale;
+  const ctx=cv.getContext('2d');
+  ctx.imageSmoothingEnabled=false;
+  const c=pal();
+  const ghostOp=state.bodyTexture==='ghost'?0.55:1;
+
+  // shadow
+  const base=baseBP();
+  const shCy=base.cy+base.ry+2,shRx=Math.round(base.rx*.65);
+  ctx.fillStyle=c.shadow;
+  for(let x=base.cx-shRx;x<=base.cx+shRx;x++)
+    ctx.fillRect(x*scale,shCy*scale,scale,scale);
+
+  // body
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const k=gridData.g[y][x];if(!k)continue;
+    const color=c[k];if(!color)continue;
+    ctx.globalAlpha = (ghostOp<1&&!['outline','eye','eyeW','mouth','mouthIn','tongue'].includes(k))?ghostOp:1;
+    ctx.fillStyle=color;
+    ctx.fillRect(x*scale,y*scale,scale,scale);
+  }
+  ctx.globalAlpha=1;
+
+  // effects
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const k=effGrid[y][x];if(!k)continue;
+    const color=c[k];if(!color)continue;
+    ctx.fillStyle=color;
+    ctx.fillRect(x*scale,y*scale,scale,scale);
+  }
+  return cv;
+}
+
 function exportPNG(){
-  const svg=document.getElementById('poporing'),cl=svg.cloneNode(true);
-  cl.setAttribute('xmlns',SVG_NS);cl.setAttribute('width',W);cl.setAttribute('height',H);
-  const bob=cl.querySelector('#bobGroup');if(bob)bob.removeAttribute('class');
-  if(state.bgPreset==='transparent') cl.querySelector('#bgRect').setAttribute('fill','none');
-  const str=new XMLSerializer().serializeToString(cl);
-  const blob=new Blob(['<?xml version="1.0"?>\n',str],{type:'image/svg+xml;charset=utf-8'});
-  const url=URL.createObjectURL(blob),img=new Image();
-  img.onload=()=>{
-    const n=document.createElement('canvas');n.width=W;n.height=H;
-    const nc=n.getContext('2d');nc.imageSmoothingEnabled=false;nc.drawImage(img,0,0,W,H);
-    const S=640,o=document.createElement('canvas');o.width=S;o.height=S;
-    const oc=o.getContext('2d');oc.imageSmoothingEnabled=false;oc.drawImage(n,0,0,S,S);
-    o.toBlob(b=>{dl(b,`${(state.name||'poporing').replace(/\s+/g,'_')}.png`);URL.revokeObjectURL(url);},'image/png');
-  };
-  img.onerror=()=>{URL.revokeObjectURL(url);alert('Export failed');};
-  img.src=url;
+  const bp=frameBP(0);
+  const gd=buildGrid(bp);
+  const eg=buildEffects(gd.info);
+  const SCALE=20;
+  const cv=gridToCanvas(gd,eg,SCALE);
+  cv.toBlob(b=>dl(b,`${(state.name||'poporing').replace(/\s+/g,'_')}.png`),'image/png');
+}
+
+function exportSheet(){
+  const frames=ANIM_FRAMES[state.animation]||[{sx:1,sy:1,ox:0,oy:0}];
+  const SCALE=8;
+  const fw=W*SCALE,fh=H*SCALE;
+  const cv=document.createElement('canvas');
+  cv.width=fw*frames.length;cv.height=fh;
+  const ctx=cv.getContext('2d');
+  ctx.imageSmoothingEnabled=false;
+
+  frames.forEach((f,idx)=>{
+    const bp=frameBP(idx);
+    const gd=buildGrid(bp);
+    const eg=buildEffects(gd.info);
+    const frame=gridToCanvas(gd,eg,SCALE);
+    ctx.drawImage(frame,idx*fw,0);
+  });
+
+  cv.toBlob(b=>dl(b,`${(state.name||'poporing').replace(/\s+/g,'_')}_sheet.png`),'image/png');
 }
 
 function exportJSON(){
-  const d=JSON.stringify({v:4,...state},null,2);
+  const d=JSON.stringify({v:5,...state},null,2);
   dl(new Blob([d],{type:'application/json'}),`${(state.name||'poporing').replace(/\s+/g,'_')}.json`);
 }
 
@@ -582,6 +620,8 @@ function loadJSON(e){
   };
   r.readAsText(f);e.target.value='';
 }
+
+// ── init ────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded',()=>{
   buildSwatches();buildChips();buildPresets();wireTabs();wire();render();

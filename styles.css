@@ -262,23 +262,13 @@ footer {
   letter-spacing: 1px;
 }
 
-/* --- animations --- */
-#bobGroup { transform-box: fill-box; transform-origin: 50% 100%; }
-#bobGroup.bob    { animation: bob 1s steps(4) infinite; }
-#bobGroup.wiggle { animation: wiggle 0.8s steps(4) infinite; }
-#bobGroup.spin   { animation: spin 2s steps(8) infinite; }
-
-@keyframes bob {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-1px); }
-}
-@keyframes wiggle {
-  0%, 100% { transform: rotate(-3deg); }
-  50%      { transform: rotate(3deg); }
-}
-@keyframes spin {
-  from { transform: rotate(0); }
-  to   { transform: rotate(360deg); }
+/* --- frame counter --- */
+.frame-info {
+  font-size: 7px;
+  color: #405880;
+  text-align: center;
+  padding: 4px 0 0;
+  letter-spacing: 0.5px;
 }
 
 /* --- responsive --- */
