@@ -89,7 +89,7 @@ let animTimer=null,animFrame=0;
 // ── state ───────────────────────────────────────────────────────────────
 
 const DEFAULTS={
-  name:'Poppy',bodyColor:'#a6c081',bodyShape:'round',bodyTexture:'normal',bodyPattern:'none',
+  name:'Poppy',bodyColor:'#a6c081',bodyShape:'tiny',bodyTexture:'normal',bodyPattern:'none',
   eyes:'classic',mouth:'smile',cheeks:'none',aura:'none',
   headTop:'leaf',headwear:'none',wings:'none',effect:'none',
   outlineStyle:'classic',bgPreset:'transparent',bgColor:'#181830',animation:'idle',
