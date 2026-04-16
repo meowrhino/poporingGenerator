@@ -4,109 +4,104 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Poporing Maker</title>
-  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="app">
     <header>
-      <h1>Poporing Maker</h1>
-      <p class="sub">customize &amp; download your own poporing</p>
+      <h1>POPORING MAKER</h1>
+      <p class="sub">create your own poring &amp; download it</p>
     </header>
 
-    <div class="preview">
-      <div class="stage">
-        <svg id="poporing" viewBox="0 0 48 48" width="384" height="384"
-             xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
-          <defs>
-            <pattern id="checker" width="2" height="2" patternUnits="userSpaceOnUse">
-              <rect width="2" height="2" fill="#f0ece4"/>
-              <rect width="1" height="1" fill="#e4dfd6"/>
-              <rect x="1" y="1" width="1" height="1" fill="#e4dfd6"/>
-            </pattern>
-          </defs>
-          <rect id="bgRect" x="0" y="0" width="48" height="48" fill="url(#checker)" />
-          <g id="shadowLayer"></g>
-          <g id="bobGroup">
-            <g id="bodyLayer"></g>
-            <g id="effectLayer"></g>
-          </g>
-        </svg>
-      </div>
-      <input type="text" id="nameInput" maxlength="20" placeholder="name your poporing" value="Poppy" />
-    </div>
+    <div class="grid">
+      <!-- LEFT: preview -->
+      <div class="col-left">
+        <div class="box">
+          <div class="box-title">PREVIEW</div>
+          <div class="stage">
+            <svg id="poporing" viewBox="0 0 32 32" width="384" height="384"
+                 xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+              <defs>
+                <pattern id="checker" width="2" height="2" patternUnits="userSpaceOnUse">
+                  <rect width="2" height="2" fill="#181830"/>
+                  <rect width="1" height="1" fill="#1e1e38"/>
+                  <rect x="1" y="1" width="1" height="1" fill="#1e1e38"/>
+                </pattern>
+              </defs>
+              <rect id="bgRect" x="0" y="0" width="32" height="32" fill="url(#checker)" />
+              <g id="shadowLayer"></g>
+              <g id="bobGroup">
+                <g id="bodyLayer"></g>
+                <g id="effectLayer"></g>
+              </g>
+            </svg>
+          </div>
+          <input type="text" id="nameInput" maxlength="16" placeholder="NAME" value="Poppy" />
+        </div>
 
-    <div class="toolbar">
-      <button id="randomBtn" class="tool-btn">randomize</button>
-      <button id="resetBtn" class="tool-btn">reset</button>
-      <button id="pngBtn" class="tool-btn">&#8595; png</button>
-      <button id="jsonBtn" class="tool-btn">&#8595; json</button>
-      <label class="tool-btn file-label">&#8593; json<input type="file" id="loadJson" accept=".json" hidden /></label>
-    </div>
+        <div class="box">
+          <div class="box-title">PRESETS</div>
+          <div class="presets" id="presets"></div>
+        </div>
 
-    <div class="editor">
-      <nav class="tabs" id="tabs">
-        <button class="tab active" data-tab="body">Body</button>
-        <button class="tab" data-tab="face">Face</button>
-        <button class="tab" data-tab="items">Items</button>
-        <button class="tab" data-tab="style">Style</button>
-      </nav>
-
-      <div class="panel" id="panel-body">
-        <div class="opt">
-          <label>Color</label>
-          <div class="row">
-            <input type="color" id="bodyColor" value="#a6c081" />
-            <div class="swatches" id="swatches"></div>
+        <div class="box">
+          <div class="box-title">ACTIONS</div>
+          <div class="actions">
+            <button class="btn" id="randomBtn">RANDOM</button>
+            <button class="btn" id="resetBtn">RESET</button>
+            <button class="btn" id="pngBtn">&#9660; PNG</button>
+            <button class="btn" id="jsonBtn">&#9660; JSON</button>
+            <label class="btn file-label">&#9650; JSON<input type="file" id="loadJson" accept=".json" hidden /></label>
           </div>
         </div>
-        <div class="opt">
-          <label>Shape</label>
-          <div class="chips" data-field="bodyShape"></div>
-        </div>
       </div>
 
-      <div class="panel hidden" id="panel-face">
-        <div class="opt">
-          <label>Eyes</label>
-          <div class="chips" data-field="eyes"></div>
-        </div>
-        <div class="opt">
-          <label>Mouth</label>
-          <div class="chips" data-field="mouth"></div>
-        </div>
-        <div class="opt">
-          <label>Cheeks</label>
-          <div class="chips" data-field="cheeks"></div>
-        </div>
-      </div>
-
-      <div class="panel hidden" id="panel-items">
-        <div class="opt">
-          <label>Head</label>
-          <div class="chips" data-field="accessory"></div>
-        </div>
-        <div class="opt">
-          <label>Effects</label>
-          <div class="chips" data-field="effect"></div>
-        </div>
-      </div>
-
-      <div class="panel hidden" id="panel-style">
-        <div class="opt">
-          <label>Outline</label>
-          <div class="chips" data-field="outlineStyle"></div>
-        </div>
-        <div class="opt">
-          <label>Background</label>
-          <div class="row">
-            <input type="color" id="bgColor" value="#f0ece4" />
-            <div class="chips" data-field="bgPreset"></div>
+      <!-- RIGHT: editor -->
+      <div class="col-right">
+        <nav class="tabs" id="tabs">
+          <button class="tab active" data-tab="body">BODY</button>
+          <button class="tab" data-tab="face">FACE</button>
+          <button class="tab" data-tab="items">ITEMS</button>
+          <button class="tab" data-tab="style">STYLE</button>
+        </nav>
+        <div class="tab-box">
+          <div class="panel" id="panel-body">
+            <div class="opt">
+              <label>COLOR</label>
+              <div class="row">
+                <input type="color" id="bodyColor" value="#a6c081" />
+                <div class="swatches" id="swatches"></div>
+              </div>
+            </div>
+            <div class="opt"><label>SHAPE</label><div class="chips" data-field="bodyShape"></div></div>
+            <div class="opt"><label>TEXTURE</label><div class="chips" data-field="bodyTexture"></div></div>
           </div>
-        </div>
-        <div class="opt">
-          <label>Animation</label>
-          <div class="chips" data-field="animation"></div>
+
+          <div class="panel hidden" id="panel-face">
+            <div class="opt"><label>EYES</label><div class="chips" data-field="eyes"></div></div>
+            <div class="opt"><label>MOUTH</label><div class="chips" data-field="mouth"></div></div>
+            <div class="opt"><label>CHEEKS</label><div class="chips" data-field="cheeks"></div></div>
+          </div>
+
+          <div class="panel hidden" id="panel-items">
+            <div class="opt"><label>HEAD TOP</label><div class="chips" data-field="headTop"></div></div>
+            <div class="opt"><label>HEADWEAR</label><div class="chips" data-field="headwear"></div></div>
+            <div class="opt"><label>WINGS</label><div class="chips" data-field="wings"></div></div>
+            <div class="opt"><label>EFFECTS</label><div class="chips" data-field="effect"></div></div>
+          </div>
+
+          <div class="panel hidden" id="panel-style">
+            <div class="opt"><label>OUTLINE</label><div class="chips" data-field="outlineStyle"></div></div>
+            <div class="opt">
+              <label>BACKGROUND</label>
+              <div class="row">
+                <input type="color" id="bgColor" value="#181830" />
+                <div class="chips" data-field="bgPreset"></div>
+              </div>
+            </div>
+            <div class="opt"><label>ANIMATION</label><div class="chips" data-field="animation"></div></div>
+          </div>
         </div>
       </div>
     </div>
