@@ -6,6 +6,8 @@
   <title>Poporing Maker</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#00d9ff" />
 </head>
 <body>
   <div class="app">
@@ -52,9 +54,11 @@
             <button class="btn" id="randomBtn">RANDOM</button>
             <button class="btn" id="resetBtn">RESET</button>
             <button class="btn" id="pngBtn">&#9660; PNG</button>
+            <button class="btn" id="gifBtn">&#9660; GIF</button>
             <button class="btn" id="sheetBtn">&#9660; SHEET</button>
             <button class="btn" id="jsonBtn">&#9660; JSON</button>
             <label class="btn file-label">&#9650; JSON<input type="file" id="loadJson" accept=".json" hidden /></label>
+            <button class="btn" id="shareBtn">SHARE</button>
           </div>
         </div>
       </div>
@@ -78,12 +82,14 @@
             </div>
             <div class="opt"><label>SHAPE</label><div class="chips" data-field="bodyShape"></div></div>
             <div class="opt"><label>TEXTURE</label><div class="chips" data-field="bodyTexture"></div></div>
+            <div class="opt"><label>PATTERN</label><div class="chips" data-field="bodyPattern"></div></div>
           </div>
 
           <div class="panel hidden" id="panel-face">
             <div class="opt"><label>EYES</label><div class="chips" data-field="eyes"></div></div>
             <div class="opt"><label>MOUTH</label><div class="chips" data-field="mouth"></div></div>
             <div class="opt"><label>CHEEKS</label><div class="chips" data-field="cheeks"></div></div>
+            <div class="opt"><label>AURA</label><div class="chips" data-field="aura"></div></div>
           </div>
 
           <div class="panel hidden" id="panel-items">

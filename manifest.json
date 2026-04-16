@@ -1,0 +1,10 @@
+{
+  "name": "Poporing Maker",
+  "short_name": "Poporing",
+  "description": "Create and customize your own pixel-art Poporing sprite",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0a0e27",
+  "theme_color": "#00d9ff",
+  "icons": []
+}
