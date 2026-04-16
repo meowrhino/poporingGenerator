@@ -3,118 +3,116 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>iW Database - Poporing Generator</title>
+  <title>Poporing Maker</title>
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="page">
-    <div class="page-title">iW Database - Poporing Generator</div>
+  <div class="app">
+    <header>
+      <h1>Poporing Maker</h1>
+      <p class="sub">customize &amp; download your own poporing</p>
+    </header>
 
-    <div class="page-body">
-      <table class="main-table">
-        <tr>
-          <td class="sprite-cell">
-            <div class="sub-title">[ Preview ]</div>
-            <div class="sprite-stage" id="stage">
-              <svg id="poporing" viewBox="0 0 40 40" width="320" height="320"
-                   xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"
-                   preserveAspectRatio="xMidYMid meet">
-                <rect id="bgRect" x="0" y="0" width="40" height="40" fill="#0d1a2a" />
-                <g id="shadowLayer"></g>
-                <g id="bobGroup">
-                  <g id="bodyLayer"></g>
-                </g>
-              </svg>
-              <div class="sprite-name" id="nameLabel">Poppy</div>
-            </div>
-
-            <div class="sub-title">[ Monster Info ]</div>
-            <div class="stats">
-              <table>
-                <tr><td class="lbl">Name:</td><td id="statName" class="highlight">Poppy</td></tr>
-                <tr><td class="lbl">Level:</td><td id="statLevel">30</td></tr>
-                <tr><td class="lbl">HP:</td><td id="statHp">524</td></tr>
-                <tr><td class="lbl">Exp / JExp:</td><td id="statExp">198 / 224</td></tr>
-                <tr><td class="lbl">Race:</td><td>Plant</td></tr>
-                <tr><td class="lbl">Size:</td><td>Medium</td></tr>
-                <tr><td class="lbl">Element:</td><td id="statElement">Poison 1</td></tr>
-                <tr><td class="lbl">Attribute:</td><td id="statAttr">cute, bouncy</td></tr>
-              </table>
-            </div>
-
-            <div class="sub-title">[ Actions ]</div>
-            <div class="actions">
-              <button id="randomBtn" class="btn">Randomize</button>
-              <button id="resetBtn" class="btn">Reset</button>
-              <button id="pngBtn" class="btn">Export PNG</button>
-              <button id="jsonBtn" class="btn">Export JSON</button>
-              <label class="btn file-btn">
-                Load JSON<input type="file" id="loadJson" accept="application/json" hidden />
-              </label>
-            </div>
-          </td>
-
-          <td class="controls-cell">
-            <div class="sub-title">[ Customize ]</div>
-            <table class="controls-table">
-              <tr>
-                <td class="lbl">Name</td>
-                <td><input type="text" id="nameInput" maxlength="20" placeholder="Poppy" /></td>
-              </tr>
-              <tr>
-                <td class="lbl">Body color</td>
-                <td>
-                  <div class="row">
-                    <input type="color" id="bodyColor" value="#8fbc4a" />
-                    <div class="swatches" id="swatches"></div>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td class="lbl">Eyes</td>
-                <td><div class="chips" id="eyesChips" data-field="eyes"></div></td>
-              </tr>
-              <tr>
-                <td class="lbl">Mouth</td>
-                <td><div class="chips" id="mouthChips" data-field="mouth"></div></td>
-              </tr>
-              <tr>
-                <td class="lbl">Cheeks</td>
-                <td><div class="chips" id="cheeksChips" data-field="cheeks"></div></td>
-              </tr>
-              <tr>
-                <td class="lbl">Accessory</td>
-                <td><div class="chips" id="accChips" data-field="accessory"></div></td>
-              </tr>
-              <tr>
-                <td class="lbl">Background</td>
-                <td>
-                  <div class="row">
-                    <input type="color" id="bgColor" value="#0d1a2a" />
-                    <div class="chips" id="bgChips" data-field="bgPreset"></div>
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td class="lbl">Animation</td>
-                <td><div class="chips" id="animChips" data-field="animation"></div></td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
+    <div class="preview">
+      <div class="stage">
+        <svg id="poporing" viewBox="0 0 48 48" width="384" height="384"
+             xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+          <defs>
+            <pattern id="checker" width="2" height="2" patternUnits="userSpaceOnUse">
+              <rect width="2" height="2" fill="#f0ece4"/>
+              <rect width="1" height="1" fill="#e4dfd6"/>
+              <rect x="1" y="1" width="1" height="1" fill="#e4dfd6"/>
+            </pattern>
+          </defs>
+          <rect id="bgRect" x="0" y="0" width="48" height="48" fill="url(#checker)" />
+          <g id="shadowLayer"></g>
+          <g id="bobGroup">
+            <g id="bodyLayer"></g>
+            <g id="effectLayer"></g>
+          </g>
+        </svg>
+      </div>
+      <input type="text" id="nameInput" maxlength="20" placeholder="name your poporing" value="Poppy" />
     </div>
 
-    <div class="page-footer">
-      <table>
-        <tr>
-          <td>iW Database style tribute &middot; poporing generator</td>
-          <td class="right">hecho con amor para fans de Ragnarok Online</td>
-        </tr>
-      </table>
+    <div class="toolbar">
+      <button id="randomBtn" class="tool-btn">randomize</button>
+      <button id="resetBtn" class="tool-btn">reset</button>
+      <button id="pngBtn" class="tool-btn">&#8595; png</button>
+      <button id="jsonBtn" class="tool-btn">&#8595; json</button>
+      <label class="tool-btn file-label">&#8593; json<input type="file" id="loadJson" accept=".json" hidden /></label>
     </div>
+
+    <div class="editor">
+      <nav class="tabs" id="tabs">
+        <button class="tab active" data-tab="body">Body</button>
+        <button class="tab" data-tab="face">Face</button>
+        <button class="tab" data-tab="items">Items</button>
+        <button class="tab" data-tab="style">Style</button>
+      </nav>
+
+      <div class="panel" id="panel-body">
+        <div class="opt">
+          <label>Color</label>
+          <div class="row">
+            <input type="color" id="bodyColor" value="#a6c081" />
+            <div class="swatches" id="swatches"></div>
+          </div>
+        </div>
+        <div class="opt">
+          <label>Shape</label>
+          <div class="chips" data-field="bodyShape"></div>
+        </div>
+      </div>
+
+      <div class="panel hidden" id="panel-face">
+        <div class="opt">
+          <label>Eyes</label>
+          <div class="chips" data-field="eyes"></div>
+        </div>
+        <div class="opt">
+          <label>Mouth</label>
+          <div class="chips" data-field="mouth"></div>
+        </div>
+        <div class="opt">
+          <label>Cheeks</label>
+          <div class="chips" data-field="cheeks"></div>
+        </div>
+      </div>
+
+      <div class="panel hidden" id="panel-items">
+        <div class="opt">
+          <label>Head</label>
+          <div class="chips" data-field="accessory"></div>
+        </div>
+        <div class="opt">
+          <label>Effects</label>
+          <div class="chips" data-field="effect"></div>
+        </div>
+      </div>
+
+      <div class="panel hidden" id="panel-style">
+        <div class="opt">
+          <label>Outline</label>
+          <div class="chips" data-field="outlineStyle"></div>
+        </div>
+        <div class="opt">
+          <label>Background</label>
+          <div class="row">
+            <input type="color" id="bgColor" value="#f0ece4" />
+            <div class="chips" data-field="bgPreset"></div>
+          </div>
+        </div>
+        <div class="opt">
+          <label>Animation</label>
+          <div class="chips" data-field="animation"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer>made with &#9829; for ragnarok fans</footer>
   </div>
-
   <script src="script.js"></script>
 </body>
 </html>
