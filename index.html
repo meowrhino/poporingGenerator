@@ -3,131 +3,116 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Poporing Generator</title>
+  <title>iW Database - Poporing Generator</title>
   <link rel="stylesheet" href="styles.css" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Baloo+2:wght@600;800&display=swap" rel="stylesheet" />
 </head>
 <body>
-  <div class="app">
-    <header class="header">
-      <h1>✿ Poporing Generator ✿</h1>
-      <p class="subtitle">crea tu propio poporing y descárgalo ♡</p>
-    </header>
+  <div class="page">
+    <div class="page-title">iW Database - Poporing Generator</div>
 
-    <main class="main">
-      <!-- PREVIEW -->
-      <section class="preview-panel">
-        <div class="stage" id="stage">
-          <svg id="poporing" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <radialGradient id="bodyGradient" cx="40%" cy="35%" r="70%">
-                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55" />
-                <stop offset="40%" stop-color="#ffffff" stop-opacity="0" />
-              </radialGradient>
-              <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
-                <feOffset dx="0" dy="4" result="off" />
-                <feComponentTransfer><feFuncA type="linear" slope="0.25"/></feComponentTransfer>
-                <feMerge>
-                  <feMergeNode />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
+    <div class="page-body">
+      <table class="main-table">
+        <tr>
+          <td class="sprite-cell">
+            <div class="sub-title">[ Preview ]</div>
+            <div class="sprite-stage" id="stage">
+              <svg id="poporing" viewBox="0 0 40 40" width="320" height="320"
+                   xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges"
+                   preserveAspectRatio="xMidYMid meet">
+                <rect id="bgRect" x="0" y="0" width="40" height="40" fill="#0d1a2a" />
+                <g id="shadowLayer"></g>
+                <g id="bobGroup">
+                  <g id="bodyLayer"></g>
+                </g>
+              </svg>
+              <div class="sprite-name" id="nameLabel">Poppy</div>
+            </div>
 
-            <rect id="bgRect" x="0" y="0" width="300" height="300" fill="#ffe6f2" />
-            <g id="sparkles"></g>
-            <g id="bobGroup">
-              <ellipse id="shadow" cx="150" cy="268" rx="78" ry="10" fill="rgba(0,0,0,0.18)" />
-              <g id="poporingBody" filter="url(#softShadow)">
-                <path id="bodyShape"
-                  d="M 150 75 C 82 75, 48 130, 48 192 C 48 246, 92 272, 150 272 C 208 272, 252 246, 252 192 C 252 130, 218 75, 150 75 Z"
-                  fill="#ff8ac9" />
-                <path id="bodyShine"
-                  d="M 150 75 C 82 75, 48 130, 48 192 C 48 246, 92 272, 150 272 C 208 272, 252 246, 252 192 C 252 130, 218 75, 150 75 Z"
-                  fill="url(#bodyGradient)" />
-              </g>
-              <g id="cheeks"></g>
-              <g id="eyes"></g>
-              <g id="mouth"></g>
-              <g id="accessory"></g>
-            </g>
-            <text id="nameLabel" x="150" y="295" text-anchor="middle"
-              font-family="'Baloo 2', 'Fredoka', system-ui, sans-serif" font-weight="800"
-              font-size="18" fill="#7a3f62"></text>
-          </svg>
-        </div>
+            <div class="sub-title">[ Monster Info ]</div>
+            <div class="stats">
+              <table>
+                <tr><td class="lbl">Name:</td><td id="statName" class="highlight">Poppy</td></tr>
+                <tr><td class="lbl">Level:</td><td id="statLevel">30</td></tr>
+                <tr><td class="lbl">HP:</td><td id="statHp">524</td></tr>
+                <tr><td class="lbl">Exp / JExp:</td><td id="statExp">198 / 224</td></tr>
+                <tr><td class="lbl">Race:</td><td>Plant</td></tr>
+                <tr><td class="lbl">Size:</td><td>Medium</td></tr>
+                <tr><td class="lbl">Element:</td><td id="statElement">Poison 1</td></tr>
+                <tr><td class="lbl">Attribute:</td><td id="statAttr">cute, bouncy</td></tr>
+              </table>
+            </div>
 
-        <div class="actions">
-          <button id="randomBtn" class="btn primary">🎲 Random</button>
-          <button id="resetBtn" class="btn">↺ Reset</button>
-          <button id="pngBtn" class="btn">⬇ PNG</button>
-          <button id="jsonBtn" class="btn">⬇ JSON</button>
-          <label class="btn file-btn">
-            ⬆ Cargar JSON
-            <input type="file" id="loadJson" accept="application/json" hidden />
-          </label>
-        </div>
-      </section>
+            <div class="sub-title">[ Actions ]</div>
+            <div class="actions">
+              <button id="randomBtn" class="btn">Randomize</button>
+              <button id="resetBtn" class="btn">Reset</button>
+              <button id="pngBtn" class="btn">Export PNG</button>
+              <button id="jsonBtn" class="btn">Export JSON</button>
+              <label class="btn file-btn">
+                Load JSON<input type="file" id="loadJson" accept="application/json" hidden />
+              </label>
+            </div>
+          </td>
 
-      <!-- CONTROLS -->
-      <section class="controls">
-        <div class="group">
-          <label>Nombre</label>
-          <input type="text" id="nameInput" maxlength="20" placeholder="Poppy" />
-        </div>
+          <td class="controls-cell">
+            <div class="sub-title">[ Customize ]</div>
+            <table class="controls-table">
+              <tr>
+                <td class="lbl">Name</td>
+                <td><input type="text" id="nameInput" maxlength="20" placeholder="Poppy" /></td>
+              </tr>
+              <tr>
+                <td class="lbl">Body color</td>
+                <td>
+                  <div class="row">
+                    <input type="color" id="bodyColor" value="#8fbc4a" />
+                    <div class="swatches" id="swatches"></div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="lbl">Eyes</td>
+                <td><div class="chips" id="eyesChips" data-field="eyes"></div></td>
+              </tr>
+              <tr>
+                <td class="lbl">Mouth</td>
+                <td><div class="chips" id="mouthChips" data-field="mouth"></div></td>
+              </tr>
+              <tr>
+                <td class="lbl">Cheeks</td>
+                <td><div class="chips" id="cheeksChips" data-field="cheeks"></div></td>
+              </tr>
+              <tr>
+                <td class="lbl">Accessory</td>
+                <td><div class="chips" id="accChips" data-field="accessory"></div></td>
+              </tr>
+              <tr>
+                <td class="lbl">Background</td>
+                <td>
+                  <div class="row">
+                    <input type="color" id="bgColor" value="#0d1a2a" />
+                    <div class="chips" id="bgChips" data-field="bgPreset"></div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="lbl">Animation</td>
+                <td><div class="chips" id="animChips" data-field="animation"></div></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
 
-        <div class="group">
-          <label>Color del cuerpo</label>
-          <div class="row">
-            <input type="color" id="bodyColor" value="#ff8ac9" />
-            <div class="swatches" id="swatches"></div>
-          </div>
-        </div>
-
-        <div class="group">
-          <label>Ojos</label>
-          <div class="chips" id="eyesChips" data-field="eyes"></div>
-        </div>
-
-        <div class="group">
-          <label>Boca</label>
-          <div class="chips" id="mouthChips" data-field="mouth"></div>
-        </div>
-
-        <div class="group">
-          <label>Mejillas</label>
-          <div class="chips" id="cheeksChips" data-field="cheeks"></div>
-        </div>
-
-        <div class="group">
-          <label>Accesorio</label>
-          <div class="chips" id="accChips" data-field="accessory"></div>
-        </div>
-
-        <div class="group">
-          <label>Fondo</label>
-          <div class="row">
-            <input type="color" id="bgColor" value="#ffe6f2" />
-            <div class="chips" id="bgChips" data-field="bgPreset"></div>
-          </div>
-        </div>
-
-        <div class="group">
-          <label>Sparkles</label>
-          <div class="chips" id="sparkChips" data-field="sparkles"></div>
-        </div>
-
-        <div class="group">
-          <label>Animación</label>
-          <div class="chips" id="animChips" data-field="animation"></div>
-        </div>
-      </section>
-    </main>
-
-    <footer class="footer">hecho con ♡ para fans de ragnarok</footer>
+    <div class="page-footer">
+      <table>
+        <tr>
+          <td>iW Database style tribute &middot; poporing generator</td>
+          <td class="right">hecho con amor para fans de Ragnarok Online</td>
+        </tr>
+      </table>
+    </div>
   </div>
 
   <script src="script.js"></script>
